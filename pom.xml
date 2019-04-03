@@ -1,0 +1,478 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.cps</groupId>
+	<artifactId>CPSDemo</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+
+	<name>CPS</name>
+	<description>CPS Project</description>
+
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>2.0.0.RELEASE</version>
+		<relativePath /> <!-- lookup parent from repository -->
+	</parent>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>javax.mail</groupId>
+			<artifactId>mail</artifactId>
+			<version>1.4</version>
+		</dependency>
+		<dependency>
+			<groupId>com.oracle</groupId>
+			<artifactId>ojdbc6</artifactId>
+			<version>11.2.0.3</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-tomcat</artifactId>
+			<scope>provided</scope>
+		</dependency>
+	</dependencies>
+	
+	<profiles>
+		<profile>
+			<id>Hazem</id>
+			<properties>
+				<local-frontend-dir>C:\Hazem\Projects\CPS\client</local-frontend-dir>
+			</properties>
+		</profile>
+		<profile>
+			<id>Chaitanya</id>
+			<properties>
+				<local-frontend-dir>C:\CODE BASE\CPS\cps\client</local-frontend-dir>
+			</properties>
+		</profile>
+	    <profile>
+	      <id>dev</id>
+		      <properties>
+		        <hostname>sacwdczjva001</hostname>
+				<database-schema>NSEEDEV</database-schema>
+				<database-connection-string>jdbc:oracle:thin:@//scan-nsgnp.ebiz.verizon.com:1521/nsgdev</database-connection-string>
+		      </properties>
+	    </profile>
+	    <profile>
+	      <id>prod</id>
+		      <properties>
+		        <hostname>sacwdczjva004</hostname>
+				<database-schema>NSEEPRD</database-schema>
+				<database-connection-string>jdbc:oracle:thin:@//scan-nsgp.verizon.com:1521/NSGPRD</database-connection-string>
+		      </properties>
+		</profile>
+	</profiles>
+	
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<java.version>1.8</java.version>
+
+		<app-name>cps</app-name>
+		<port-number>4400</port-number>
+		<backup-dir>\\${hostname}.ebiz.verizon.com\${app-name}-deploy\backup</backup-dir>
+		<backend-deploy-dir>\\${hostname}.ebiz.verizon.com\${app-name}-deploy\server</backend-deploy-dir>
+		<frontend-deploy-dir>\\${hostname}.ebiz.verizon.com\${app-name}-deploy\client</frontend-deploy-dir>
+		<backend-install-dir>\\${hostname}.ebiz.verizon.com\${app-name}-install-server</backend-install-dir>
+		<frontend-install-dir>\\${hostname}.ebiz.verizon.com\${app-name}-install-client</frontend-install-dir>
+		<rest-url>http://${hostname}.ebiz.verizon.com:${port-number}/${app-name}/</rest-url>
+		
+		<local-frontend-dist>${local-frontend-dir}\dist</local-frontend-dist>
+		<index-html-file>${local-frontend-dir}\src\index.html</index-html-file>
+		<config-ts-file>${local-frontend-dir}\src\app\config\config.ts</config-ts-file>
+		
+		<database-schema-to-change>NSEEDEV</database-schema-to-change>
+		<dao-dir>/src/main/java/com/cps/dao/</dao-dir> <!-- CHANGE PATH PER APP -->
+		<database-connection-string-to-change>jdbc:oracle:thin:@//scan-nsgnp.ebiz.verizon.com:1521/nsgdev</database-connection-string-to-change>
+		<rest-url-to-change>http://localhost:${port-number}/${app-name}/</rest-url-to-change>
+		<index-href-to-change>&lt;base href="/onefiber"></index-href-to-change>
+		<index-href>&lt;base href="/apps/${app-name}/"></index-href>
+	</properties>
+	
+	<build>
+		<plugins>
+			<plugin>
+			    <artifactId>maven-clean-plugin</artifactId>
+			    <version>3.1.0</version>
+			    <configuration>
+			      <filesets>
+			        <fileset>
+			          <directory>${local-frontend-dist}</directory>
+			          <followSymlinks>false</followSymlinks>
+			        </fileset>
+			        <fileset>
+			          <directory>${backup-dir}</directory>
+			          	<includes>
+	                    	<include>**/*</include>
+	                    </includes>
+			          <followSymlinks>false</followSymlinks>
+			        </fileset>
+			      </filesets>
+			    </configuration>
+			</plugin>
+			
+			<plugin>
+				<groupId>com.google.code.maven-replacer-plugin</groupId>
+				<artifactId>replacer</artifactId>
+				<version>1.5.3</version>
+				<executions>
+					<!-- The following executions will replace all necessary strings with prod or dev values for the appropriate environment -->
+					<!-- They are all defined with a 'generate-sources' phase -->
+					<execution>
+					<id>replace-schema</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>replace</goal>
+						</goals>
+						<configuration>
+							<basedir>${basedir}${dao-dir}</basedir>
+								<includes>
+								    <include>*.*</include>
+								</includes>
+							<replacements>
+								<replacement>
+									<token>${database-schema-to-change}</token>
+									<value>${database-schema}</value>
+								</replacement>
+							</replacements>
+						</configuration>
+					</execution>
+					<execution>
+					<id>replace-connection-string</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>replace</goal>
+						</goals>
+						<configuration>
+							<basedir>${basedir}/src/main/resources/</basedir>
+							<includes>
+							    <include>application.properties</include>
+							</includes>
+							<replacements>
+								<replacement>
+									<token>${database-connection-string-to-change}</token>
+									<value>${database-connection-string}</value>
+								</replacement>
+							</replacements>
+						</configuration>
+					</execution>
+					<execution>
+					<id>replace-properties</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>replace</goal>
+						</goals>
+						<configuration>
+							<basedir>${basedir}/src/main/resources/</basedir>
+							<includes>
+							    <include>application.properties</include>
+							</includes>
+							<replacements>
+								<replacement>
+									<token>${database-schema-to-change}</token>
+									<value>${database-schema}</value>
+								</replacement>
+							</replacements>
+						</configuration>
+					</execution>
+					<execution>
+						<id>replace-base-url</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>replace</goal>
+						</goals>
+						<configuration>
+							<file>${index-html-file}</file>
+							<replacements>
+								<replacement>
+									<token>${index-href-to-change}</token>
+									<value>${index-href}</value>
+								</replacement>
+							</replacements>
+						</configuration>
+					</execution>
+					<execution>
+						<id>replace-rest-url</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>replace</goal>
+						</goals>
+						<configuration>
+							<file>${config-ts-file}</file>
+							<replacements>
+								<replacement>
+									<token>${rest-url-to-change}</token>
+									<value>${rest-url}</value>
+								</replacement>
+							</replacements>
+						</configuration>
+					</execution>
+					
+					<!-- The following executions will reset all necessary strings from prod or dev values back to local -->
+					<!-- They are all defined with a 'install' phase -->
+					
+					<execution>
+						<id>reset-schema</id>
+						<phase>install</phase>
+						<goals>
+							<goal>replace</goal>
+						</goals>
+						<configuration>
+							<basedir>${basedir}${dao-dir}</basedir>
+								<includes>
+								    <include>*.*</include>
+								</includes>
+							<replacements>
+								<replacement>
+									<token>${database-schema}</token>
+									<value>${database-schema-to-change}</value>
+								</replacement>
+							</replacements>
+						</configuration>
+					</execution>
+					<execution>
+					<id>reset-connection-string</id>
+						<phase>install</phase>
+						<goals>
+							<goal>replace</goal>
+						</goals>
+						<configuration>
+							<basedir>${basedir}/src/main/resources/</basedir>
+							<includes>
+							    <include>application.properties</include>
+							</includes>
+							<replacements>
+								<replacement>
+									<token>${database-connection-string}</token>
+									<value>${database-connection-string-to-change}</value>
+								</replacement>
+							</replacements>
+						</configuration>
+					</execution>
+					<execution>
+					<id>reset-properties</id>
+						<phase>install</phase>
+						<goals>
+							<goal>replace</goal>
+						</goals>
+						<configuration>
+							<basedir>${basedir}/src/main/resources/</basedir>
+							<includes>
+							    <include>application.properties</include>
+							</includes>
+							<replacements>
+								<replacement>
+									<token>${database-schema}</token>
+									<value>${database-schema-to-change}</value>
+								</replacement>
+							</replacements>
+						</configuration>
+					</execution>
+					<execution>
+						<id>reset-base-url</id>
+						<phase>install</phase>
+						<goals>
+							<goal>replace</goal>
+						</goals>
+						<configuration>
+							<file>${index-html-file}</file>
+							<replacements>
+								<replacement>
+									<token>${index-href}</token>
+									<value>${index-href-to-change}</value>
+								</replacement>
+							</replacements>
+						</configuration>
+					</execution>
+					<execution>
+						<id>reset-rest-url</id>
+						<phase>install</phase>
+						<goals>
+							<goal>replace</goal>
+						</goals>
+						<configuration>
+							<file>${config-ts-file}</file>
+							<replacements>
+								<replacement>
+									<token>${rest-url}</token>
+									<value>${rest-url-to-change}</value>
+								</replacement>
+							</replacements>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+			    <artifactId>exec-maven-plugin</artifactId>
+			    <version>1.6.0</version>
+			    <executions>
+			    	<!-- Run the following by un-commenting it, only if npm install is needed -->
+			    	
+			    	<!-- 
+			        <execution>
+				    	<phase>generate-sources</phase>
+				        <id>npm install</id>
+					    <goals>
+					    	<goal>exec</goal>
+					    </goals>
+				        <configuration>
+				        	<workingDirectory>${local-frontend-dir}</workingDirectory>
+				            <executable>npm</executable>
+				    -->
+				            <!-- The following weird characters are the UTF-8 equivalent of double dashes which are not allowed -->
+				            <!-- Also, make sure you change the user name and password to match your USWIN user name and password -->
+				    <!-- 
+				            <commandlineArgs>&#x002D;&#x002D;proxy http://username:password@desktop.proxy.vzwcorp.com:5150 install</commandlineArgs>
+						</configuration>
+				        </execution>
+				    --> 
+			        <execution>
+				    	<id>ng-build</id>
+				        <goals>
+				        	<goal>exec</goal>
+				        </goals>
+				        <phase>generate-sources</phase>
+				        <configuration>
+				        	<workingDirectory>${local-frontend-dir}</workingDirectory>
+				            <executable>ng</executable>
+				            	<commandlineArgs>build --prod --aot --output-hashing=all --build-optimizer</commandlineArgs>
+				        </configuration>
+					</execution>
+				</executions>
+			</plugin>
+		    
+		    <plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+					
+		    
+		    <plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>1.8</version>
+				<executions>
+					<execution>
+						<id>backup-old-files</id>
+						<phase>install</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<target name="backup working files">
+						    	<copy todir="${backup-dir}">
+						        	<fileset dir="${backend-install-dir}" includes="*.jar" />
+						        	<fileset dir="${frontend-install-dir}" includes="*.*" />
+								</copy>
+							</target>
+						</configuration>
+					</execution>
+					
+					<execution>
+						<id>delete-old-files</id>
+						<phase>install</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<target>
+						    	<delete>
+						        	<fileset dir="${backend-deploy-dir}" includes="*.*" />
+						            <fileset dir="${frontend-deploy-dir}" includes="*.*" />
+								</delete>
+							</target>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		    
+		    
+		    <plugin>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>3.1.0</version>
+				<executions>
+					<execution>
+						<id>copy-server-files</id>
+					    <phase>install</phase>
+					    <goals>
+					    	<goal>copy-resources</goal>
+					    </goals>
+					    <configuration>
+					    	<outputDirectory>${backend-deploy-dir}</outputDirectory>
+					        <overwrite>true</overwrite>
+					        <resources>
+					        	<resource>
+					            <directory>${basedir}/target</directory>
+					            <include>*.jar</include>
+					            <filtering>false</filtering>
+					            </resource>
+					        </resources>
+					    </configuration>
+					</execution>
+					<execution>
+						<id>copy-client-files</id>
+						<phase>install</phase>
+					    <goals>
+					    	<goal>copy-resources</goal>
+					    </goals>
+					    <configuration>
+						    <outputDirectory>${frontend-deploy-dir}</outputDirectory>
+						    <overwrite>true</overwrite>
+						    <resources>
+						    	<resource>
+						        <directory>${local-frontend-dist}</directory>
+						        <filtering>false</filtering>
+						    	</resource>
+						    </resources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+</project>
+
+
+<!-- 
+	<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>1.8</version>
+				<executions>
+					<execution>
+						<phase>install</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<target>
+						    	<delete>
+						        	<fileset dir="${backend-deploy-dir}" includes="*.*" />
+						            <fileset dir="${frontend-deploy-dir}" includes="*.*" />
+								</delete>
+							</target>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+-->
